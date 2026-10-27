@@ -820,8 +820,11 @@ bool utf_iscomposing(int c1, int c2, GraphemeState *state)
 /// @return Sequence length, 0 for empty string and 1 for non-UTF-8 byte
 ///         sequence.
 int utf_ptr2len(const char *const p_in)
-  FUNC_ATTR_PURE FUNC_ATTR_WARN_UNUSED_RESULT FUNC_ATTR_NONNULL_ALL
+  FUNC_ATTR_PURE FUNC_ATTR_WARN_UNUSED_RESULT
 {
+  if (!p_in) {
+    return 0;
+  }
   uint8_t *p = (uint8_t *)p_in;
   if (*p == NUL) {
     return 0;
@@ -850,8 +853,11 @@ int utf_byte2len(int b)
 // Returns number > "size" for an incomplete byte sequence.
 // Never returns zero.
 int utf_ptr2len_len(const char *p, int size)
-  FUNC_ATTR_PURE FUNC_ATTR_NONNULL_ALL FUNC_ATTR_WARN_UNUSED_RESULT
+  FUNC_ATTR_PURE FUNC_ATTR_WARN_UNUSED_RESULT
 {
+  if (!p || size <= 0) {
+    return 1;
+  }
   int m;
 
   int len = utf8len_tab[(uint8_t)(*p)];
@@ -875,8 +881,11 @@ int utf_ptr2len_len(const char *p, int size)
 /// This includes following composing characters.
 /// Returns zero for NUL.
 int utfc_ptr2len(const char *const p)
-  FUNC_ATTR_PURE FUNC_ATTR_WARN_UNUSED_RESULT FUNC_ATTR_NONNULL_ALL
+  FUNC_ATTR_PURE FUNC_ATTR_WARN_UNUSED_RESULT
 {
+  if (!p) {
+    return 0;
+  }
   uint8_t b0 = (uint8_t)(*p);
 
   if (b0 == NUL) {
@@ -915,7 +924,7 @@ int utfc_ptr2len(const char *const p)
 int utfc_ptr2len_len(const char *p, int size)
   FUNC_ATTR_PURE FUNC_ATTR_WARN_UNUSED_RESULT
 {
-  if (size < 1 || *p == NUL) {
+  if (!p || size < 1 || *p == NUL) {
     return 0;
   }
   if ((uint8_t)p[0] < 0x80 && (size == 1 || (uint8_t)p[1] < 0x80)) {  // be quick for ASCII

@@ -71,16 +71,22 @@ static const char typename_float[] = "float";
 /// terminate with a NUL. The allocated memory always has size `len + 1`, even
 /// when `string` is shorter.
 char *xstrnsave(const char *string, size_t len)
-  FUNC_ATTR_NONNULL_RET FUNC_ATTR_MALLOC FUNC_ATTR_NONNULL_ALL
+  FUNC_ATTR_NONNULL_RET FUNC_ATTR_MALLOC
 {
+  if (!string) {
+    return xmallocz(len);
+  }
   return strncpy(xmallocz(len), string, len);  // NOLINT(runtime/printf)
 }
 
 // Same as vim_strsave(), but any characters found in esc_chars are preceded
 // by a backslash.
 char *vim_strsave_escaped(const char *string, const char *esc_chars)
-  FUNC_ATTR_NONNULL_RET FUNC_ATTR_MALLOC FUNC_ATTR_NONNULL_ALL
+  FUNC_ATTR_NONNULL_RET FUNC_ATTR_MALLOC
 {
+  if (!string) {
+    return xstrdup("");
+  }
   return vim_strsave_escaped_ext(string, esc_chars, '\\', false);
 }
 
@@ -88,8 +94,14 @@ char *vim_strsave_escaped(const char *string, const char *esc_chars)
 // characters where rem_backslash() would remove the backslash.
 // Escape the characters with "cc".
 char *vim_strsave_escaped_ext(const char *string, const char *esc_chars, char cc, bool bsl)
-  FUNC_ATTR_NONNULL_RET FUNC_ATTR_MALLOC FUNC_ATTR_NONNULL_ALL
+  FUNC_ATTR_NONNULL_RET FUNC_ATTR_MALLOC
 {
+  if (!string) {
+    return xstrdup("");
+  }
+  if (!esc_chars) {
+    esc_chars = "";
+  }
   // First count the number of backslashes required.
   // Then allocate the memory and insert them.
   size_t length = 1;                    // count the trailing NUL
@@ -138,9 +150,12 @@ char *vim_strsave_escaped_ext(const char *string, const char *esc_chars, char cc
 ///
 /// @return [allocated] Copy of the string.
 char *vim_strnsave_unquoted(const char *const string, const size_t length)
-  FUNC_ATTR_MALLOC FUNC_ATTR_WARN_UNUSED_RESULT FUNC_ATTR_NONNULL_ALL
+  FUNC_ATTR_MALLOC FUNC_ATTR_WARN_UNUSED_RESULT
   FUNC_ATTR_NONNULL_RET
 {
+  if (!string || length == 0) {
+    return xstrdup("");
+  }
 #define ESCAPE_COND(p, inquote, string_end) \
   (*(p) == '\\' && (inquote) && (p) + 1 < (string_end) && ((p)[1] == '\\' || (p)[1] == '"'))
   size_t ret_length = 0;
@@ -184,8 +199,12 @@ char *vim_strnsave_unquoted(const char *const string, const size_t length)
 ///
 /// @return  the result in allocated memory.
 char *vim_strsave_shellescape(const char *string, bool do_special, bool do_newline)
-  FUNC_ATTR_NONNULL_RET FUNC_ATTR_MALLOC FUNC_ATTR_NONNULL_ALL
+  FUNC_ATTR_NONNULL_RET FUNC_ATTR_MALLOC
 {
+  if (!string) {
+    return xstrdup("''");
+  }
+
   size_t l;
 
   // Only csh and similar shells expand '!' within single quotes.  For sh and
@@ -298,8 +317,11 @@ char *vim_strsave_shellescape(const char *string, bool do_special, bool do_newli
 // Like vim_strsave(), but make all characters uppercase.
 // This uses ASCII lower-to-upper case translation, language independent.
 char *vim_strsave_up(const char *string)
-  FUNC_ATTR_NONNULL_RET FUNC_ATTR_MALLOC FUNC_ATTR_NONNULL_ALL
+  FUNC_ATTR_NONNULL_RET FUNC_ATTR_MALLOC
 {
+  if (!string) {
+    return xstrdup("");
+  }
   char *p1 = xmalloc(strlen(string) + 1);
   vim_strcpy_up(p1, string);
   return p1;
@@ -308,8 +330,11 @@ char *vim_strsave_up(const char *string)
 /// Like xstrnsave(), but make all characters uppercase.
 /// This uses ASCII lower-to-upper case translation, language independent.
 char *vim_strnsave_up(const char *string, size_t len)
-  FUNC_ATTR_NONNULL_RET FUNC_ATTR_MALLOC FUNC_ATTR_NONNULL_ALL
+  FUNC_ATTR_NONNULL_RET FUNC_ATTR_MALLOC
 {
+  if (!string) {
+    return xmallocz(len);
+  }
   char *p1 = xmalloc(len + 1);
   vim_strncpy_up(p1, string, len);
   return p1;
@@ -317,8 +342,10 @@ char *vim_strnsave_up(const char *string, size_t len)
 
 // ASCII lower-to-upper case translation, language independent.
 void vim_strup(char *p)
-  FUNC_ATTR_NONNULL_ALL
 {
+  if (!p) {
+    return;
+  }
   uint8_t c;
   while ((c = (uint8_t)(*p)) != NUL) {
     *p++ = (char)(uint8_t)(c < 'a' || c > 'z' ? c : c - 0x20);
@@ -327,8 +354,14 @@ void vim_strup(char *p)
 
 // strcpy plus vim_strup.
 void vim_strcpy_up(char *restrict dst, const char *restrict src)
-  FUNC_ATTR_NONNULL_ALL
 {
+  if (!dst) {
+    return;
+  }
+  if (!src) {
+    *dst = NUL;
+    return;
+  }
   uint8_t c;
   while ((c = (uint8_t)(*src++)) != NUL) {
     *dst++ = (char)(uint8_t)(c < 'a' || c > 'z' ? c : c - 0x20);
@@ -338,8 +371,16 @@ void vim_strcpy_up(char *restrict dst, const char *restrict src)
 
 // strncpy (NUL-terminated) plus vim_strup.
 void vim_strncpy_up(char *restrict dst, const char *restrict src, size_t n)
-  FUNC_ATTR_NONNULL_ALL
 {
+  if (!dst) {
+    return;
+  }
+  if (!src) {
+    if (n > 0) {
+      *dst = NUL;
+    }
+    return;
+  }
   uint8_t c;
   while (n-- && (c = (uint8_t)(*src++)) != NUL) {
     *dst++ = (char)(uint8_t)(c < 'a' || c > 'z' ? c : c - 0x20);
@@ -522,9 +563,9 @@ int vim_strnicmp_asc(const char *s1, const char *s2, size_t len)
 ///         if it was not found or character is invalid. NUL character is never
 ///         found, use `strlen()` instead.
 char *vim_strchr(const char *const string, const int c)
-  FUNC_ATTR_NONNULL_ALL FUNC_ATTR_PURE FUNC_ATTR_WARN_UNUSED_RESULT
+  FUNC_ATTR_PURE FUNC_ATTR_WARN_UNUSED_RESULT
 {
-  if (c <= 0) {
+  if (!string || c <= 0) {
     return NULL;
   } else if (c < 0x80) {
     // NOLINTNEXTLINE(*-casting): remove once CI uses glibc 2.43
